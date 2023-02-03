@@ -1,0 +1,19 @@
+library(rstan)
+library(bayesplot)
+rstan_options(auto_write=TRUE)
+options(mc.cores=parallel::detectCores())
+file_beer_sales_2<-read.csv("3-2-1-beer-sales-2.csv")
+sample_size<-nrow(file_beer_sales_2)
+formula_lm<-formula(sales~temperature)
+X<-model.matrix(formula_lm,file_beer_sales_2)
+head(X,n=3)
+N<-nrow(file_beer_sales_2)
+K<-2
+Y<-file_beer_sales_2$sales
+data_list_design<-list(N=N,K=K,Y=Y,X=X)
+mcmc_result_design<-stan(
+  file="3-4-1-lm-design-matrix.stan",
+  data=data_list_design,
+  seed=1
+)
+print(mcmc_result_design)
