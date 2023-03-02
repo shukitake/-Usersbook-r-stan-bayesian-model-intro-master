@@ -9,29 +9,23 @@ set.seed(1)
 rstan_options(auto_write=TRUE)
 options(mc.cores=parallel::detectCores())
 #データ作成
-temp <- rnorm(1000, 20,5) %>% round(1) 
+temp <- rnorm(2000, 20,5) %>% round(1) 
 temp
-holiday <- rbinom(1000, 1, 2/7)
+holiday <- rbinom(2000, 1, 2/7)
 holiday
-shop <- runif(1000, 1, 10) %>% round()
+shop <- runif(2000, 1, 4) %>% round()
 shop
-shop_r <- rnorm(10, 0, 1)
+shop_r <- rnorm(4, 0, 1)
 shop_r
 data<-data.frame(temp,holiday,shop)
 data
 r=ifelse(shop==1, shop_r[1], ifelse(shop==2, shop_r[2],
-                                    ifelse(shop==3, shop_r[3], 
-                                    ifelse(shop==4, shop_r[4],
-                                    ifelse(shop==5, shop_r[5],
-                                    ifelse(shop==6, shop_r[6],
-                                    ifelse(shop==7, shop_r[7],
-                                    ifelse(shop==8, shop_r[8],
-                                    ifelse(shop==9, shop_r[9], shop_r[10])))))))))
+                                    ifelse(shop==3, shop_r[3],shop_r[4])))
 r 
 lambda=exp(-2+0.3*temp+0.4*holiday+r)
 lambda
 
-data$sale<-rpois(1000,lambda)
+data$sale<-rpois(2000,lambda)
 data$holiday<-factor(holiday)
 data$shop<-factor(shop)
 data %>% head()
@@ -42,7 +36,7 @@ plot <- ggplot(
   data=data,
   mapping=aes(x=temp, y=sale)) + 
   geom_point(aes(color=holiday))
-  labs(title="sale")
+labs(title="sale")
 plot
 data
 #stan design_mat　GLM
@@ -103,9 +97,9 @@ plot(eff, points = TRUE)
 #予測区間
 set.seed(1)
 eff_pre <- conditional_effects(glm_pois_brms, 
-                        method="predict",
-                        effects="temp:shop",
-                        probs=c(0.005, 0.995))
+                               method="predict",
+                               effects="temp:shop",
+                               probs=c(0.005, 0.995))
 plot(eff_pre, points = TRUE)
 
 #ランダム切片モデル　stan
@@ -119,7 +113,11 @@ data_list_design_random
 glmm_pois_design <-stan(
   file="GLMM_1_design_mat.stan",
   data=data_list_design_random,
-  seed=1
+  seed=1,
+  chains = 4,                            
+  iter = 5000,                           
+  warmup = 4000,                        
+  thin = 1
 )
 print(glmm_pois_design,
       pars=c("b","sigma_r"))
@@ -136,8 +134,9 @@ glmm_pois_brms <- brm(
   formula = sale ~ temp + holiday + (1|shop) ,  
   family = poisson(),                         
   data = data,                     
-  seed = 1
-)
+  seed = 1,
+  
+  )
 prior_summary(glmm_pois_brms)
 glmm_pois_brms
 plot(glmm_pois_brms)
@@ -157,13 +156,5 @@ eff_glmm_brms<-conditional_effects(
 )
 
 plot(eff_glmm_brms,points=TRUE)
-#正規線型モデル
-glm_brms <- brm(
-  formula = sale ~ temp + holiday + shop,  
-  family = gaussian(),                         
-  data = data,                     
-  seed = 1,
-  prior=c(set_prior("",class="Intercept"))
-)
-glm_pois_brms
-prior_summary(glm_pois_brms)
+
+
